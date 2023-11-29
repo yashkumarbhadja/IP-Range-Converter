@@ -3,16 +3,29 @@ import pandas as pd
 import ipaddress
 
 def parse_ip_range(ip_range_str):
-    if '-' in ip_range_str:
-        start_ip, end_ip = ip_range_str.split('-')
-        ip_range = list(ipaddress.IPv4Network(f"{start_ip}-{end_ip}", strict=False))
-        return ip_range
+    ips = ip_range_str.split('-')
+
+    if len(ips) == 2:
+        start_ip, end_ip = ips
+
+        start_ip_obj = ipaddress.IPv4Address(start_ip)
+        end_ip_obj = ipaddress.IPv4Address(end_ip)
+
+        ip_list = [str(ipaddress.IPv4Address(ip)) for ip in range(int(start_ip_obj), int(end_ip_obj) + 1)]
+
+        return ip_list
     else:
-        return [ip_range_str]
+        try:
+            # Attempt to convert to IPv4Address
+            ipaddress.IPv4Address(ip_range_str)
+            return [ip_range_str]
+        except ipaddress.AddressValueError:
+            # If not a valid IPv4Address, return the original string
+            return [ip_range_str]
 
 def file_to_ip_list(input_file):
-    df = pd.read_csv(input_file)
-    ip_list = df['IP Range'].apply(parse_ip_range).explode().tolist()
+    df = pd.read_csv(input_file, dtype=str)
+    ip_list = df.iloc[:, 0].apply(parse_ip_range).explode().tolist()
     return ip_list
 
 def ip_list_to_csv(ip_list, output_file):
